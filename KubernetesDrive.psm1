@@ -89,3 +89,14 @@ function Get-Namespaces()
     $metadata = $items.metadata
     return $metadata;
 }
+
+function k8 {
+    #[CmdletBinding()]
+    param ()
+    begin {
+        $namespace = Split-Path -Path (Get-Location) -Leaf
+    }
+    process {
+        kubectl --namespace $namespace $args
+    }
+}
