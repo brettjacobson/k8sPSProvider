@@ -19,10 +19,8 @@ class Cluster : ClusterBase
     {
         $obj =  @()
 
-        $namespaces += Get-Namespaces
-        $namespaces | ForEach-Object {
-           $obj += [kubernetesNamespace]::new($_.name)
-        }
+        $namespaces = Get-Namespaces
+        $obj += $namespaces
 
         return $obj;
     }
@@ -31,13 +29,30 @@ class Cluster : ClusterBase
 [SHiPSProvider()]
 class kubernetesNamespace: SHiPSDirectory
 {
-    kubernetesNamespace([string] $name): base($name)
-    {
+    Hidden [object] $data = $null
+
+    [string] $kind
+    [datetime] $creationTimestamp
+    [string] $labels
+    [string] $uid
+    [string] $generateName
+
+    kubernetesNamespace([Object] $namespaceData): base ($namespaceData.metadata.name) {
+        $this.data = $namespaceData
+        $this.kind = $this.data.kind
+
+        $this.creationTimeStamp = [datetime]::Parse($this.data.metadata.creationTimestamp)
+        $this.labels = $this.data.metadata.labels
+        $this.uid = $this.data.metadata.uid
+        $this.generateName = $this.data.metadata.generateName
     }
 
     [object[]] GetChildItem()
     {
         $obj =  @()
+
+        $items = Get-AllForNamespace -Namespace $this.name
+        $obj  += $items
         return $obj
     }
 
@@ -50,44 +65,94 @@ class kubernetesNamespace: SHiPSDirectory
 
 
 [SHiPSProvider()]
-class k8sPod: SHiPSLeaf
+class kubernetesPod: SHiPSLeaf
 {
-    [string] $country
-    [string] $company
-    [string] $twitter
-    [bool] $MVP
-    [string] $bio
+    Hidden [object] $data = $null
 
-    Hidden [object] $podData = $null
+    [string] $kind
+    [datetime] $creationTimestamp
+    [string] $labels
+    [string] $uid
+    [string] $generateName
 
-    k8sPod(): base()
-    {
-    }
+    kubernetesPod([Object] $podData): base ($podData.metadata.name) {
+        $this.data = $podData
+        $this.kind = $this.data.kind
 
-    k8sPod([String] $name, [Object] $podData): base($name)
-    {
-      $this.podData = $podData
-      $this.country = $podData.country
-      $this.company = $podData.company
-      $this.Twitter = $podData.Twitter
-      $this.MVP = $podData.MVP
-      $this.BIO = $podData.BIO
+        $this.creationTimeStamp = [datetime]::Parse($this.data.metadata.creationTimestamp)
+        $this.labels = $this.data.metadata.labels
+        $this.uid = $this.data.metadata.uid
+        $this.generateName = $this.data.metadata.generateName
     }
 }
 
+[SHiPSProvider()]
+class kubernetesService: SHiPSLeaf
+{
+    Hidden [object] $data = $null
+
+    [string] $kind
+    [datetime] $creationTimestamp
+    [string] $labels
+    [string] $uid
+    [string] $generateName
+    [string] $type
+
+    kubernetesService([Object] $podData): base ($podData.metadata.name) {
+        $this.data = $podData
+        $this.kind = $this.data.kind
+
+        $this.creationTimeStamp = [datetime]::Parse($this.data.metadata.creationTimestamp)
+        $this.labels = $this.data.metadata.labels
+        $this.uid = $this.data.metadata.uid
+        $this.generateName = $this.data.metadata.generateName
+        $this.type = $this.data.metadata.type
+    }
+}
 
 class TypeDynamicParameter
 {
     [Parameter()]
-    [ValidateSet("Pod", "Service", "All")]
+    [ValidateSet("Pod", "Service", "Deployment", "All")]
     [string]$Type = "All"
 }
 
 function Get-Namespaces()
 {
+    $obj = @()
     $items = ([string[]](kubectl get namespaces -o json) | ConvertFrom-Json).items
-    $metadata = $items.metadata
-    return $metadata;
+
+    foreach ($item in $items) {
+        $parsedItem = [kubernetesNamespace]::new($item)
+        $obj += $parsedItem
+    }
+
+    return $obj;
+}
+
+function Get-AllForNamespace($Namespace)
+{
+    $obj = @()
+    $items = ([string[]](kubectl --namespace $Namespace get all -o json) | ConvertFrom-Json).items
+
+    foreach ($item in $items) {
+        switch ($item.kind) {
+            'Pod' {
+                $pod = [kubernetesPod]::new($item)
+                $obj += $pod
+            }
+            'Deployment' {
+            }
+            'ReplicaSet' {
+            }
+            'Service' {
+                $service = [kubernetesService]::new($item)
+                $obj += $service
+            }
+        }
+    }
+
+    return $obj;
 }
 
 function k8 {

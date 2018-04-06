@@ -30,9 +30,16 @@ k8 get pods
 
 --WORK IN PROGRESS--
 
+## NOTES
+
 <https://github.com/PowerShell/SHiPS/blob/development/docs/README.md>
 <https://github.com/PowerShell/SHiPS/blob/development/samples/DynamicParameter/DynamicParameter.psm1>
 <https://github.com/PowerShell/SHiPS/blob/development/samples/FileSystem/FileSystem.psm1>
 
 <https://github.com/rchaganti/PSConfDrive>
 <http://www.powershellmagazine.com/2018/04/03/psconfeu-agenda-as-a-powershell-drive-using-ships/>
+
+## TODO
+
+1. make the format file, to control columns of the different things
+2. do cool stuf
